@@ -1,53 +1,59 @@
+using Microsoft.AspNetCore.Mvc;
 using ApiInicial.DTOs;
 using ApiInicial.Services;
-using Microsoft.AspNetCore.Mvc;
 
-namespace ApiInicial.Controllers;
-
-[Route("api/v1/[controller]")]
-[ApiController]
-public class ProductosController : ControllerBase
+namespace ApiInicial.Controllers
 {
-    private readonly IProductoService _productoService;
-
-    public ProductosController(IProductoService productoService)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ProductosController : ControllerBase
     {
-        _productoService = productoService;
-    }
+        private readonly IProductoService _productoService;
 
-    [HttpGet]
-    public async Task<ActionResult<List<ProductoResponseDto>>> ObtenerTodos()
-    {
-        var productos = await _productoService.ObtenerTodosAsync();
-        return Ok(productos);
-    }
-
-    [HttpPost]
-    public async Task<ActionResult<ProductoResponseDto>> Crear([FromBody] ProductoRequestDto productoRequest)
-    {
-        var nuevoProducto = await _productoService.CrearProductoAsync(productoRequest);
-        return Ok(nuevoProducto);
-    }
-
-    [HttpPut("{id}")]
-    public async Task<ActionResult<ProductoResponseDto>> Actualizar(int id, [FromBody] ProductoRequestDto productoRequest)
-    {
-        var resultado = await _productoService.ActualizarProducto(id, productoRequest);
-        if (resultado == null)
+        public ProductosController(IProductoService productoService)
         {
-            return NotFound();
+            _productoService = productoService;
         }
-        return Ok(resultado);
-    }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Eliminar(int id)
-    {
-        var eliminado = await _productoService.EliminarAsync(id);
-        if (!eliminado)
+        [HttpGet]
+        public async Task<IActionResult> ObtenerTodos()
         {
-            return NotFound();
+            var productos = await _productoService.ObtenerTodosAsync();
+            return Ok(productos);
         }
-        return NoContent();
+
+        [HttpPost]
+        public async Task<IActionResult> Crear([FromBody] ProductoRequestDto productoRequest)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var nuevoProducto = await _productoService.CrearProductoAsync(productoRequest);
+            return StatusCode(201, nuevoProducto);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Actualizar(int id, [FromBody] ProductoRequestDto producto)
+        {
+            var productoActualizado = await _productoService.ActualizarProducto(id, producto);
+            if (productoActualizado == null)
+            {
+                return NotFound(new { mensaje = "Producto no encontrado para actualizar" });
+            }
+            return Ok(productoActualizado);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Eliminar(int id)
+        {
+            var eliminado = await _productoService.EliminarAsync(id);
+            if (!eliminado)
+            {
+                return NotFound(new { mensaje = "No se pudo eliminar, producto no encontrado" });
+            }
+            return NoContent();
+        }
     }
 }
